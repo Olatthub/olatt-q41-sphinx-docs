@@ -1,8 +1,18 @@
-name: Build Sphinx docs
+name: Build and deploy Sphinx docs
 
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build-docs:
@@ -25,8 +35,26 @@ jobs:
       - name: Build Sphinx HTML docs
         run: sphinx-build -b html docs docs/_build/html
 
-      - name: Upload docs as artifact
+      - name: Upload docs as artifact (for grading)
         uses: actions/upload-artifact@v4
         with:
           name: sphinx-docs-html
           path: docs/_build/html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy-pages.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-docs
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy-pages
+        uses: actions/deploy-pages@v4
+
